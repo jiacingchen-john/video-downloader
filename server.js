@@ -93,9 +93,16 @@ app.post('/download/ytdlp', (req, res) => {
 
   infoProc.on('close', () => {
     // Now download
-    const dlProc = spawn('yt-dlp', ['-o', tmpFile, url]);
+    const dlProc = spawn('yt-dlp', [
+      '--no-playlist',
+      '-f', 'bv*+ba/b',
+      '--merge-output-format', 'mp4',
+      '-o', tmpFile,
+      url
+    ]);
 
-    dlProc.stderr.on('data', () => {}); // suppress yt-dlp progress to logs
+    let stderrBuf = '';
+    dlProc.stderr.on('data', (d) => { stderrBuf += d.toString(); });
 
     dlProc.on('error', (err) => {
       if (!res.headersSent) res.status(500).json({ error: 'yt-dlp error: ' + err.message });
@@ -103,7 +110,8 @@ app.post('/download/ytdlp', (req, res) => {
 
     dlProc.on('close', (code) => {
       if (code !== 0) {
-        if (!res.headersSent) res.status(500).json({ error: 'yt-dlp exited with code ' + code });
+        const detail = stderrBuf.split('\n').filter(l => l.includes('ERROR')).join(' ') || stderrBuf.slice(-300);
+        if (!res.headersSent) res.status(500).json({ error: 'yt-dlp 失敗：' + detail });
         return;
       }
 
