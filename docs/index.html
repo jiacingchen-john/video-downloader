@@ -262,7 +262,9 @@
       if (document.getElementById('_vdp')) return;
       var F = new Set();
       var urlToEl = new Map();
+      var urlTimestamps = new Map();
       var activeUrl = null;
+      var playTimestamp = 0;
 
       var p = document.createElement('div');
       p.id = '_vdp';
@@ -372,24 +374,53 @@
         });
         r.appendChild(cp);
         d.appendChild(r);
+        urlTimestamps.set(u, Date.now());
         li.prepend(d);
 
-        if (activeUrl && (activeUrl === u || activeUrl.indexOf(u) !== -1 || u.indexOf(activeUrl) !== -1)) markActive(activeUrl);
+        // Auto-mark if added within 2s of a play event (MSE stream segments/manifest)
+        if (u.indexOf('blob:') === 0) return;
+        if (Date.now() - playTimestamp < 2000) {
+          setTimeout(function() { markActive(u); }, 30);
+        } else if (activeUrl && (activeUrl === u || activeUrl.indexOf(u) !== -1 || u.indexOf(activeUrl) !== -1)) {
+          markActive(activeUrl);
+        }
+      }
+
+      function bestNonBlobUrl() {
+        // Find the most recently detected non-blob URL (within 5s)
+        var best = null, bestTs = 0;
+        var now = Date.now();
+        urlTimestamps.forEach(function(ts, url) {
+          if (url.indexOf('blob:') !== 0 && ts > bestTs && (now - ts) < 5000) {
+            bestTs = ts; best = url;
+          }
+        });
+        return best;
       }
 
       function watchVideo(v) {
         function onPlay() {
+          playTimestamp = Date.now();
           var u = v.currentSrc || v.src || v.getAttribute('src');
           if (!u) return;
-          if (!urlToEl.has(u)) addItem(u);
-          markActive(u);
+
+          if (u.indexOf('blob:') === 0) {
+            // MSE stream — currentSrc is a blob, find real stream URL
+            if (!urlToEl.has(u)) addItem(u);
+            var real = bestNonBlobUrl();
+            if (real) { markActive(real); }
+            else {
+              // No real URL yet; upcoming XHR will be auto-marked via playTimestamp
+              markActive(u);
+            }
+          } else {
+            if (!urlToEl.has(u)) addItem(u);
+            markActive(u);
+          }
         }
         v.addEventListener('play', onPlay);
         v.addEventListener('playing', onPlay);
-        if (!v.paused) {
-          var u = v.currentSrc || v.src || v.getAttribute('src');
-          if (u) { if (!urlToEl.has(u)) addItem(u); markActive(u); }
-        }
+        if (!v.paused) onPlay();
       }
 
       document.querySelectorAll('video').forEach(watchVideo);
