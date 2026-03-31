@@ -265,6 +265,7 @@
       var urlTimestamps = new Map();
       var activeUrl = null;
       var playTimestamp = 0;
+      var markedLockUntil = 0;
 
       var p = document.createElement('div');
       p.id = '_vdp';
@@ -343,21 +344,28 @@
         var r = document.createElement('div');
         r.style.cssText = 'display:flex;gap:4px';
 
+        var isManifest = /\.(m3u8|mpd)([?#]|$)/i.test(u);
+
         if (isBlob) {
-          // blob: URL — try direct anchor download; if it's a MediaSource blob it may not work
           r.appendChild(mk('\u4E0B\u8F09\uFF08\u672C\u6A5F\uFF09', '#059669', function() {
             try {
-              var a = document.createElement('a');
-              a.href = u;
-              a.download = 'video.mp4';
+              var a = document.createElement('a'); a.href = u; a.download = 'video.mp4';
               document.body.appendChild(a); a.click(); a.remove();
             } catch(e) { alert('\u5931\u6557\uff1a' + e.message); }
           }));
-          // Show hint below URL text
           var hint = document.createElement('div');
           hint.style.cssText = 'color:#f59e0b;font-size:10px;margin-top:3px';
-          hint.textContent = '\u26a0 Blob URL\uff08MSE\u4e32\u6d41\uff09\u82e5\u4e0b\u8f09\u5931\u6557\uff0c\u8acb\u5411\u4e0b\u627e m3u8/mp4 \u7db2\u5740\u4e26\u4f7f\u7528 yt-dlp \u4e0b\u8f09';
+          hint.textContent = '\u26a0 MSE\u4e32\u6d41\uff0c\u8acb\u5411\u4e0b\u627e m3u8/mp4 \u7528 yt-dlp \u4e0b\u8f09';
           d.insertBefore(hint, r);
+        } else if (isManifest) {
+          // m3u8/mpd: direct download would only fetch the text playlist, must use yt-dlp
+          r.appendChild(mk('yt-dlp \u4e0b\u8f09', '#8b5cf6', function() {
+            window.open(A + '/?url=' + encodeURIComponent(u) + '&mode=ytdlp', '_blank');
+          }));
+          var hint2 = document.createElement('div');
+          hint2.style.cssText = 'color:#94a3b8;font-size:10px;margin-top:3px';
+          hint2.textContent = 'HLS/DASH \u6e05\u55ae\uff0cyt-dlp \u6703\u81ea\u52d5\u5408\u4f75\u6240\u6709\u7247\u6bb5';
+          d.insertBefore(hint2, r);
         } else {
           r.appendChild(mk('\u76f4\u63a5\u4e0b\u8f09', '#3b82f6', function() {
             window.open(A + '/?url=' + encodeURIComponent(u) + '&mode=direct', '_blank');
@@ -377,22 +385,34 @@
         urlTimestamps.set(u, Date.now());
         li.prepend(d);
 
-        // Auto-mark if added within 2s of a play event (MSE stream segments/manifest)
         if (u.indexOf('blob:') === 0) return;
-        if (Date.now() - playTimestamp < 2000) {
+        // Auto-mark: within 2s of play event AND lock not held AND prefer manifest URLs
+        var withinWindow = (Date.now() - playTimestamp) < 2000;
+        var lockFree = Date.now() > markedLockUntil;
+        if (withinWindow && lockFree) {
+          markedLockUntil = Date.now() + 8000;
           setTimeout(function() { markActive(u); }, 30);
         } else if (activeUrl && (activeUrl === u || activeUrl.indexOf(u) !== -1 || u.indexOf(activeUrl) !== -1)) {
           markActive(activeUrl);
         }
       }
 
+      function urlPriority(u) {
+        if (/\.(m3u8|mpd)([?#]|$)/i.test(u)) return 3;
+        if (/\.(mp4|webm|mov|flv|mkv)([?#]|$)/i.test(u)) return 2;
+        return 1;
+      }
+
       function bestNonBlobUrl() {
-        // Find the most recently detected non-blob URL (within 5s)
-        var best = null, bestTs = 0;
+        // Find the most recently detected non-blob URL (within 5s), prefer m3u8/mpd
+        var best = null, bestPri = 0, bestTs = 0;
         var now = Date.now();
         urlTimestamps.forEach(function(ts, url) {
-          if (url.indexOf('blob:') !== 0 && ts > bestTs && (now - ts) < 5000) {
-            bestTs = ts; best = url;
+          if (url.indexOf('blob:') === 0) return;
+          if ((now - ts) > 5000) return;
+          var pri = urlPriority(url);
+          if (pri > bestPri || (pri === bestPri && ts > bestTs)) {
+            bestPri = pri; bestTs = ts; best = url;
           }
         });
         return best;
@@ -408,14 +428,12 @@
             // MSE stream — currentSrc is a blob, find real stream URL
             if (!urlToEl.has(u)) addItem(u);
             var real = bestNonBlobUrl();
-            if (real) { markActive(real); }
-            else {
-              // No real URL yet; upcoming XHR will be auto-marked via playTimestamp
-              markActive(u);
-            }
+            if (real) { markActive(real); markedLockUntil = Date.now() + 8000; }
+            // else: upcoming XHR will be auto-marked via playTimestamp
           } else {
             if (!urlToEl.has(u)) addItem(u);
             markActive(u);
+            markedLockUntil = Date.now() + 8000;
           }
         }
         v.addEventListener('play', onPlay);
@@ -428,7 +446,9 @@
       function add(u) {
         if (!u || F.has(u)) return;
         var isBlob = u.indexOf('blob:') === 0;
-        if (!isBlob && !/\.(mp4|m3u8|webm|mov|ts|flv|mkv)([?#]|$)/i.test(u)) return;
+        // Skip .ts segments — individual HLS chunks, not useful to download alone
+        if (/\.ts([?#]|$)/i.test(u)) return;
+        if (!isBlob && !/\.(mp4|m3u8|mpd|webm|mov|flv|mkv)([?#]|$)/i.test(u)) return;
         addItem(u);
       }
 
