@@ -315,10 +315,48 @@
         }
       }
 
+      function forceAdd(u) {
+        // Add regardless of extension filter — for currentSrc of playing videos
+        if (!u || F.has(u)) return;
+        F.add(u);
+        st.textContent = '\u5075\u6e2c\u5230 ' + F.size + ' \u500b\u5f71\u7247';
+        var d = document.createElement('div');
+        d.style.cssText = 'background:#12141e;border-radius:6px;padding:8px;margin-top:6px;border:1px solid transparent;transition:border-color .3s';
+        urlToEl.set(u, d);
+        var t = document.createElement('div');
+        t.style.cssText = 'color:#86efac;font-size:11px;word-break:break-all;margin-bottom:5px';
+        t.textContent = u.length > 70 ? u.slice(0, 70) + '\u2026' : u;
+        d.appendChild(t);
+        var r = document.createElement('div');
+        r.style.cssText = 'display:flex;gap:4px';
+        function mk(label, bg, fn) {
+          var b = document.createElement('button');
+          b.textContent = label;
+          b.style.cssText = 'flex:1;padding:4px 2px;background:' + bg + ';border:none;color:#fff;border-radius:4px;cursor:pointer;font-size:11px';
+          b.onclick = fn; return b;
+        }
+        r.appendChild(mk('\u76f4\u63a5\u4e0b\u8f09', '#3b82f6', function() { window.open(A + '/?url=' + encodeURIComponent(u) + '&mode=direct', '_blank'); }));
+        r.appendChild(mk('yt-dlp', '#8b5cf6', function() { window.open(A + '/?url=' + encodeURIComponent(u) + '&mode=ytdlp', '_blank'); }));
+        var cp = mk('\u8907\u88fd', '#374151', function() { navigator.clipboard.writeText(u); cp.textContent = '\u2713'; setTimeout(function() { cp.textContent = '\u8907\u88fd'; }, 1500); });
+        r.appendChild(cp);
+        d.appendChild(r);
+        li.prepend(d);
+      }
+
       function watchVideo(v) {
-        v.addEventListener('play', function() { markActive(v.currentSrc || v.src || v.getAttribute('src')); });
-        v.addEventListener('playing', function() { markActive(v.currentSrc || v.src || v.getAttribute('src')); });
-        if (!v.paused && (v.currentSrc || v.src)) markActive(v.currentSrc || v.src);
+        function onPlay() {
+          var u = v.currentSrc || v.src || v.getAttribute('src');
+          if (!u) return;
+          if (!urlToEl.has(u)) forceAdd(u);
+          markActive(u);
+        }
+        v.addEventListener('play', onPlay);
+        v.addEventListener('playing', onPlay);
+        // Already playing when bookmarklet injected
+        if (!v.paused) {
+          var u = v.currentSrc || v.src || v.getAttribute('src');
+          if (u) { if (!urlToEl.has(u)) forceAdd(u); markActive(u); }
+        }
       }
 
       document.querySelectorAll('video').forEach(watchVideo);
