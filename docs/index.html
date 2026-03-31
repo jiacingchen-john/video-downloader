@@ -396,7 +396,7 @@
       }).observe(document.body, { childList: true, subtree: true });
     };
 
-    var code = '(' + fn.toString().replace(/\bA\b/g, '"' + API + '"') + ')()';
+    var code = '(' + fn.toString() + ')(' + JSON.stringify(API) + ')';
     document.getElementById('bm-link').href = 'javascript:' + encodeURIComponent(code);
   })();
 
