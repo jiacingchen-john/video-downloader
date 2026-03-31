@@ -315,57 +315,19 @@
         }
       }
 
-      function forceAdd(u) {
-        // Add regardless of extension filter — for currentSrc of playing videos
+      function mk(label, bg, fn) {
+        var b = document.createElement('button');
+        b.textContent = label;
+        b.style.cssText = 'flex:1;padding:4px 2px;background:' + bg + ';border:none;color:#fff;border-radius:4px;cursor:pointer;font-size:11px';
+        b.onclick = fn; return b;
+      }
+
+      function addItem(u) {
         if (!u || F.has(u)) return;
         F.add(u);
         st.textContent = '\u5075\u6e2c\u5230 ' + F.size + ' \u500b\u5f71\u7247';
-        var d = document.createElement('div');
-        d.style.cssText = 'background:#12141e;border-radius:6px;padding:8px;margin-top:6px;border:1px solid transparent;transition:border-color .3s';
-        urlToEl.set(u, d);
-        var t = document.createElement('div');
-        t.style.cssText = 'color:#86efac;font-size:11px;word-break:break-all;margin-bottom:5px';
-        t.textContent = u.length > 70 ? u.slice(0, 70) + '\u2026' : u;
-        d.appendChild(t);
-        var r = document.createElement('div');
-        r.style.cssText = 'display:flex;gap:4px';
-        function mk(label, bg, fn) {
-          var b = document.createElement('button');
-          b.textContent = label;
-          b.style.cssText = 'flex:1;padding:4px 2px;background:' + bg + ';border:none;color:#fff;border-radius:4px;cursor:pointer;font-size:11px';
-          b.onclick = fn; return b;
-        }
-        r.appendChild(mk('\u76f4\u63a5\u4e0b\u8f09', '#3b82f6', function() { window.open(A + '/?url=' + encodeURIComponent(u) + '&mode=direct', '_blank'); }));
-        r.appendChild(mk('yt-dlp', '#8b5cf6', function() { window.open(A + '/?url=' + encodeURIComponent(u) + '&mode=ytdlp', '_blank'); }));
-        var cp = mk('\u8907\u88fd', '#374151', function() { navigator.clipboard.writeText(u); cp.textContent = '\u2713'; setTimeout(function() { cp.textContent = '\u8907\u88fd'; }, 1500); });
-        r.appendChild(cp);
-        d.appendChild(r);
-        li.prepend(d);
-      }
 
-      function watchVideo(v) {
-        function onPlay() {
-          var u = v.currentSrc || v.src || v.getAttribute('src');
-          if (!u) return;
-          if (!urlToEl.has(u)) forceAdd(u);
-          markActive(u);
-        }
-        v.addEventListener('play', onPlay);
-        v.addEventListener('playing', onPlay);
-        // Already playing when bookmarklet injected
-        if (!v.paused) {
-          var u = v.currentSrc || v.src || v.getAttribute('src');
-          if (u) { if (!urlToEl.has(u)) forceAdd(u); markActive(u); }
-        }
-      }
-
-      document.querySelectorAll('video').forEach(watchVideo);
-
-      function add(u) {
-        if (!u || F.has(u)) return;
-        if (!/\.(mp4|m3u8|webm|mov|ts|flv|mkv)([?#]|$)/i.test(u)) return;
-        F.add(u);
-        st.textContent = '\u5075\u6e2c\u5230 ' + F.size + ' \u500b\u5f71\u7247';
+        var isBlob = u.indexOf('blob:') === 0;
 
         var d = document.createElement('div');
         d.style.cssText = 'background:#12141e;border-radius:6px;padding:8px;margin-top:6px;border:1px solid transparent;transition:border-color .3s';
@@ -373,26 +335,32 @@
 
         var t = document.createElement('div');
         t.style.cssText = 'color:#86efac;font-size:11px;word-break:break-all;margin-bottom:5px';
-        t.textContent = u.length > 70 ? u.slice(0, 70) + '\u2026' : u;
+        t.textContent = (isBlob ? '[Blob] ' : '') + (u.length > 65 ? u.slice(0, 65) + '\u2026' : u);
         d.appendChild(t);
 
         var r = document.createElement('div');
         r.style.cssText = 'display:flex;gap:4px';
 
-        function mk(label, bg, fn) {
-          var b = document.createElement('button');
-          b.textContent = label;
-          b.style.cssText = 'flex:1;padding:4px 2px;background:' + bg + ';border:none;color:#fff;border-radius:4px;cursor:pointer;font-size:11px';
-          b.onclick = fn;
-          return b;
+        if (isBlob) {
+          // blob: URL — must download locally in this page, server can't access it
+          r.appendChild(mk('\u4E0B\u8F09\uFF08\u672C\u6A5F\uFF09', '#059669', function() {
+            fetch(u).then(function(res) { return res.blob(); }).then(function(blob) {
+              var ext = blob.type.split('/')[1] || 'mp4';
+              var a = document.createElement('a');
+              a.href = URL.createObjectURL(blob);
+              a.download = 'video.' + ext;
+              document.body.appendChild(a); a.click(); a.remove();
+            }).catch(function(e) { alert('\u4E0B\u8F09\u5931\u6557\uFF1A' + e.message); });
+          }));
+        } else {
+          r.appendChild(mk('\u76f4\u63a5\u4e0b\u8f09', '#3b82f6', function() {
+            window.open(A + '/?url=' + encodeURIComponent(u) + '&mode=direct', '_blank');
+          }));
+          r.appendChild(mk('yt-dlp', '#8b5cf6', function() {
+            window.open(A + '/?url=' + encodeURIComponent(u) + '&mode=ytdlp', '_blank');
+          }));
         }
 
-        r.appendChild(mk('\u76f4\u63a5\u4e0b\u8f09', '#3b82f6', function() {
-          window.open(A + '/?url=' + encodeURIComponent(u) + '&mode=direct', '_blank');
-        }));
-        r.appendChild(mk('yt-dlp', '#8b5cf6', function() {
-          window.open(A + '/?url=' + encodeURIComponent(u) + '&mode=ytdlp', '_blank');
-        }));
         var cp = mk('\u8907\u88fd', '#374151', function() {
           navigator.clipboard.writeText(u);
           cp.textContent = '\u2713';
@@ -403,6 +371,30 @@
         li.prepend(d);
 
         if (activeUrl && (activeUrl === u || activeUrl.indexOf(u) !== -1 || u.indexOf(activeUrl) !== -1)) markActive(activeUrl);
+      }
+
+      function watchVideo(v) {
+        function onPlay() {
+          var u = v.currentSrc || v.src || v.getAttribute('src');
+          if (!u) return;
+          if (!urlToEl.has(u)) addItem(u);
+          markActive(u);
+        }
+        v.addEventListener('play', onPlay);
+        v.addEventListener('playing', onPlay);
+        if (!v.paused) {
+          var u = v.currentSrc || v.src || v.getAttribute('src');
+          if (u) { if (!urlToEl.has(u)) addItem(u); markActive(u); }
+        }
+      }
+
+      document.querySelectorAll('video').forEach(watchVideo);
+
+      function add(u) {
+        if (!u || F.has(u)) return;
+        var isBlob = u.indexOf('blob:') === 0;
+        if (!isBlob && !/\.(mp4|m3u8|webm|mov|ts|flv|mkv)([?#]|$)/i.test(u)) return;
+        addItem(u);
       }
 
       var _f = window.fetch;
