@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>影片下載器</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .card {
+      background: #1a1d27;
+      border: 1px solid #2d3147;
+      border-radius: 16px;
+      padding: 36px;
+      width: 100%;
+      max-width: 560px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 28px;
+      text-align: center;
+      background: linear-gradient(90deg, #60a5fa, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 28px;
+      background: #12141e;
+      border-radius: 10px;
+      padding: 4px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: #94a3b8;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: all .2s;
+    }
+
+    .tab-btn.active {
+      background: #2d3147;
+      color: #e2e8f0;
+    }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      color: #94a3b8;
+      margin-bottom: 6px;
+      margin-top: 16px;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 12px 14px;
+      background: #12141e;
+      border: 1px solid #2d3147;
+      border-radius: 8px;
+      color: #e2e8f0;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color .2s;
+    }
+
+    input[type="text"]:focus { border-color: #60a5fa; }
+    input[type="text"]::placeholder { color: #4a5568; }
+
+    .btn {
+      display: block;
+      width: 100%;
+      margin-top: 20px;
+      padding: 13px;
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity .2s, transform .1s;
+    }
+
+    .btn:hover { opacity: .9; }
+    .btn:active { transform: scale(.98); }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    .status {
+      margin-top: 18px;
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      display: none;
+    }
+
+    .status.info  { background: #1e3a5f; color: #93c5fd; display: block; }
+    .status.error { background: #3b1f1f; color: #fca5a5; display: block; }
+    .status.ok    { background: #1a3828; color: #86efac; display: block; }
+
+    .progress-wrap {
+      margin-top: 14px;
+      display: none;
+    }
+
+    .progress-wrap.visible { display: block; }
+
+    progress {
+      width: 100%;
+      height: 6px;
+      border-radius: 4px;
+      appearance: none;
+      -webkit-appearance: none;
+      background: #2d3147;
+      overflow: hidden;
+    }
+
+    progress::-webkit-progress-bar { background: #2d3147; border-radius: 4px; }
+    progress::-webkit-progress-value { background: linear-gradient(90deg,#3b82f6,#8b5cf6); border-radius: 4px; }
+
+    .progress-label {
+      text-align: right;
+      font-size: 0.78rem;
+      color: #64748b;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+<div class="card">
+  <h1>影片下載器</h1>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="direct">直接下載</button>
+    <button class="tab-btn" data-tab="ytdlp">進階下載（yt-dlp）</button>
+  </div>
+
+  <!-- 直接下載 -->
+  <div class="tab-panel active" id="tab-direct">
+    <label>影片直連網址（.mp4）</label>
+    <input type="text" id="direct-url" placeholder="https://example.com/video.mp4" />
+
+    <label>儲存檔名（選填）</label>
+    <input type="text" id="direct-filename" placeholder="video.mp4" />
+
+    <button class="btn" id="direct-btn" onclick="downloadDirect()">開始下載</button>
+
+    <div class="progress-wrap" id="direct-progress">
+      <progress id="direct-bar" value="0" max="100"></progress>
+      <div class="progress-label" id="direct-progress-label">0%</div>
+    </div>
+
+    <div class="status" id="direct-status"></div>
+  </div>
+
+  <!-- yt-dlp 下載 -->
+  <div class="tab-panel" id="tab-ytdlp">
+    <label>影片網址（YouTube、Twitter、Instagram 等）</label>
+    <input type="text" id="ytdlp-url" placeholder="https://www.youtube.com/watch?v=..." />
+
+    <button class="btn" id="ytdlp-btn" onclick="downloadYtdlp()">開始下載</button>
+
+    <div class="status" id="ytdlp-status"></div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script>
+  // Tab switching
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  function setStatus(id, msg, type) {
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.className = 'status ' + type;
+  }
+
+  function triggerDownload(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  }
+
+  async function downloadDirect() {
+    const url = document.getElementById('direct-url').value.trim();
+    const filename = document.getElementById('direct-filename').value.trim() || 'video.mp4';
+    if (!url) return setStatus('direct-status', '請輸入影片網址', 'error');
+
+    const btn = document.getElementById('direct-btn');
+    const progressWrap = document.getElementById('direct-progress');
+    const bar = document.getElementById('direct-bar');
+    const label = document.getElementById('direct-progress-label');
+
+    btn.disabled = true;
+    progressWrap.classList.add('visible');
+    bar.value = 0;
+    label.textContent = '0%';
+    setStatus('direct-status', '下載中...', 'info');
+
+    try {
+      const res = await fetch(CONFIG.API_BASE + '/download/direct', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, filename })
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: res.statusText }));
+        throw new Error(err.error || res.statusText);
+      }
+
+      const contentLength = res.headers.get('Content-Length');
+      const total = contentLength ? parseInt(contentLength, 10) : 0;
+      let received = 0;
+      const chunks = [];
+      const reader = res.body.getReader();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        received += value.length;
+        if (total > 0) {
+          const pct = Math.round((received / total) * 100);
+          bar.value = pct;
+          label.textContent = pct + '%';
+        } else {
+          label.textContent = (received / 1024 / 1024).toFixed(1) + ' MB';
+        }
+      }
+
+      bar.value = 100;
+      label.textContent = '100%';
+
+      const blob = new Blob(chunks);
+      triggerDownload(blob, filename);
+      setStatus('direct-status', '下載完成！', 'ok');
+    } catch (e) {
+      setStatus('direct-status', '錯誤：' + e.message, 'error');
+      progressWrap.classList.remove('visible');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function downloadYtdlp() {
+    const url = document.getElementById('ytdlp-url').value.trim();
+    if (!url) return setStatus('ytdlp-status', '請輸入影片網址', 'error');
+
+    const btn = document.getElementById('ytdlp-btn');
+    btn.disabled = true;
+    setStatus('ytdlp-status', '正在用 yt-dlp 下載，請稍候（可能需要數十秒）…', 'info');
+
+    try {
+      const res = await fetch(CONFIG.API_BASE + '/download/ytdlp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: res.statusText }));
+        throw new Error(err.error || res.statusText);
+      }
+
+      const disposition = res.headers.get('Content-Disposition') || '';
+      const match = disposition.match(/filename="?([^"]+)"?/);
+      const filename = match ? match[1] : 'video.mp4';
+
+      const blob = await res.blob();
+      triggerDownload(blob, filename);
+      setStatus('ytdlp-status', '下載完成！', 'ok');
+    } catch (e) {
+      setStatus('ytdlp-status', '錯誤：' + e.message, 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+</script>
+</body>
+</html>
