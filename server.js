@@ -11,6 +11,7 @@ const YTDLP_TMP = '/tmp/ytdlp';
 
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(__dirname, 'docs')));
 
 // Ensure tmp dir exists
 if (!fs.existsSync(YTDLP_TMP)) {
