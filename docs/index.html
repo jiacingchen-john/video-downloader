@@ -360,7 +360,8 @@
         } else if (isManifest) {
           // m3u8/mpd: direct download would only fetch the text playlist, must use yt-dlp
           r.appendChild(mk('yt-dlp \u4e0b\u8f09', '#8b5cf6', function() {
-            window.open(A + '/?url=' + encodeURIComponent(u) + '&mode=ytdlp', '_blank');
+            var ref = encodeURIComponent(window.location.href);
+            window.open(A + '/?url=' + encodeURIComponent(u) + '&mode=ytdlp&referer=' + ref, '_blank');
           }));
           var hint2 = document.createElement('div');
           hint2.style.cssText = 'color:#94a3b8;font-size:10px;margin-top:3px';
@@ -368,10 +369,12 @@
           d.insertBefore(hint2, r);
         } else {
           r.appendChild(mk('\u76f4\u63a5\u4e0b\u8f09', '#3b82f6', function() {
-            window.open(A + '/?url=' + encodeURIComponent(u) + '&mode=direct', '_blank');
+            var ref = encodeURIComponent(window.location.href);
+            window.open(A + '/?url=' + encodeURIComponent(u) + '&mode=direct&referer=' + ref, '_blank');
           }));
           r.appendChild(mk('yt-dlp', '#8b5cf6', function() {
-            window.open(A + '/?url=' + encodeURIComponent(u) + '&mode=ytdlp', '_blank');
+            var ref = encodeURIComponent(window.location.href);
+            window.open(A + '/?url=' + encodeURIComponent(u) + '&mode=ytdlp&referer=' + ref, '_blank');
           }));
         }
 
@@ -496,12 +499,15 @@
   });
 
   // Auto-fill from URL params (sent by bookmarklet)
+  var PAGE_REFERER = '';
   (function() {
     const params = new URLSearchParams(window.location.search);
     const u = params.get('url');
     const mode = params.get('mode');
+    const ref = params.get('referer');
     if (!u) return;
 
+    PAGE_REFERER = ref || '';
     history.replaceState({}, '', window.location.pathname);
 
     if (mode === 'ytdlp') {
@@ -606,7 +612,7 @@
       const res = await fetch(CONFIG.API_BASE + '/download/ytdlp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url })
+        body: JSON.stringify({ url, referer: PAGE_REFERER })
       });
 
       if (!res.ok) {

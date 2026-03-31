@@ -80,13 +80,23 @@ for chunk in response.iter_content(chunk_size=65536):
 // Body: { url }
 // Uses yt-dlp to download the video to /tmp/ytdlp, then streams it back
 app.post('/download/ytdlp', (req, res) => {
-  const { url } = req.body;
+  const { url, referer } = req.body;
   if (!url) return res.status(400).json({ error: 'url is required' });
 
   const tmpFile = path.join(YTDLP_TMP, `video_${Date.now()}.%(ext)s`);
 
+  // Build extra headers args
+  const headerArgs = [];
+  if (referer) {
+    try {
+      const origin = new URL(referer).origin;
+      headerArgs.push('--add-header', `Referer:${referer}`);
+      headerArgs.push('--add-header', `Origin:${origin}`);
+    } catch (_) {}
+  }
+
   // First pass: get filename
-  const infoProc = spawn('yt-dlp', ['--get-filename', '-o', tmpFile, url]);
+  const infoProc = spawn('yt-dlp', ['--get-filename', '-o', tmpFile, ...headerArgs, url]);
   let outFilename = '';
 
   infoProc.stdout.on('data', (d) => { outFilename += d.toString().trim(); });
@@ -98,6 +108,7 @@ app.post('/download/ytdlp', (req, res) => {
       '-f', 'bv*+ba/b',
       '--merge-output-format', 'mp4',
       '-o', tmpFile,
+      ...headerArgs,
       url
     ]);
 
