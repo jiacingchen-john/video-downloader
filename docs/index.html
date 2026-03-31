@@ -40,7 +40,7 @@
 
     .tabs {
       display: flex;
-      gap: 8px;
+      gap: 6px;
       margin-bottom: 28px;
       background: #12141e;
       border-radius: 10px;
@@ -49,15 +49,16 @@
 
     .tab-btn {
       flex: 1;
-      padding: 10px;
+      padding: 9px 4px;
       border: none;
       border-radius: 8px;
       background: transparent;
       color: #94a3b8;
       cursor: pointer;
-      font-size: 0.9rem;
+      font-size: 0.82rem;
       font-weight: 500;
       transition: all .2s;
+      white-space: nowrap;
     }
 
     .tab-btn.active {
@@ -122,11 +123,7 @@
     .status.error { background: #3b1f1f; color: #fca5a5; display: block; }
     .status.ok    { background: #1a3828; color: #86efac; display: block; }
 
-    .progress-wrap {
-      margin-top: 14px;
-      display: none;
-    }
-
+    .progress-wrap { margin-top: 14px; display: none; }
     .progress-wrap.visible { display: block; }
 
     progress {
@@ -148,6 +145,53 @@
       color: #64748b;
       margin-top: 4px;
     }
+
+    /* Bookmarklet tab */
+    .bm-box {
+      margin-top: 20px;
+      background: #12141e;
+      border: 1px dashed #3b82f6;
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .bm-link {
+      display: inline-block;
+      padding: 10px 20px;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      color: #fff;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 1rem;
+      text-decoration: none;
+      cursor: grab;
+      user-select: none;
+      margin: 14px 0;
+    }
+
+    .bm-link:active { cursor: grabbing; }
+
+    .bm-desc {
+      font-size: 0.85rem;
+      color: #64748b;
+      line-height: 1.6;
+    }
+
+    .bm-steps {
+      text-align: left;
+      margin-top: 16px;
+      padding: 14px;
+      background: #1a1d27;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      color: #94a3b8;
+      line-height: 2;
+    }
+
+    .bm-steps b { color: #e2e8f0; }
+
+    .highlight { color: #60a5fa; }
   </style>
 </head>
 <body>
@@ -157,6 +201,7 @@
   <div class="tabs">
     <button class="tab-btn active" data-tab="direct">直接下載</button>
     <button class="tab-btn" data-tab="ytdlp">進階下載（yt-dlp）</button>
+    <button class="tab-btn" data-tab="bookmarklet">書籤偵測器</button>
   </div>
 
   <!-- 直接下載 -->
@@ -186,6 +231,25 @@
 
     <div class="status" id="ytdlp-status"></div>
   </div>
+
+  <!-- 書籤偵測器 -->
+  <div class="tab-panel" id="tab-bookmarklet">
+    <div class="bm-box">
+      <div class="bm-desc">將下方按鈕拖曳到瀏覽器書籤列</div>
+
+      <a class="bm-link" href="javascript:(function(){if(document.getElementById('_vdp'))return;var A='http://157.245.200.214:3002';var F=new Set();var p=document.createElement('div');p.id='_vdp';p.style.cssText='position:fixed;top:12px;right:12px;z-index:2147483647;background:%231a1d27;color:%23e2e8f0;padding:14px;border-radius:10px;width:340px;max-height:500px;overflow-y:auto;font-family:system-ui,sans-serif;font-size:13px;border:1px solid %233b82f6;box-shadow:0 8px 30px rgba(0,0,0,.7)';var h=document.createElement('div');h.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:10px';h.innerHTML='%3Cb style=%22color:%2360a5fa;font-size:14px%22%3E%F0%9F%93%B9 %E5%BD%B1%E7%89%87%E5%81%B5%E6%B8%AC%E5%99%A8%3C/b%3E';var xb=document.createElement('button');xb.textContent='\u2715';xb.style.cssText='background:none;border:none;color:%2394a3b8;cursor:pointer;font-size:16px;line-height:1';xb.onclick=function(){p.remove()};h.appendChild(xb);p.appendChild(h);var st=document.createElement('div');st.style.cssText='color:%2364748b;font-size:12px;margin-bottom:8px';st.textContent='\u76e3\u807d\u4e2d\uff0c\u8acb\u89f8\u767c\u5f71\u7247\u8f09\u5165...';p.appendChild(st);var li=document.createElement('div');p.appendChild(li);document.body.appendChild(p);function add(u){if(!u||F.has(u))return;if(!/\.(mp4|m3u8|webm|mov|ts|flv|mkv)([?%23]|$)/i.test(u))return;F.add(u);st.textContent='\u5075\u6e2c\u5230 '+F.size+' \u500b\u5f71\u7247';var d=document.createElement('div');d.style.cssText='background:%2312141e;border-radius:6px;padding:8px;margin-top:6px';var t=document.createElement('div');t.style.cssText='color:%2386efac;font-size:11px;word-break:break-all;margin-bottom:5px';t.textContent=u.length%3E70?u.slice(0,70)+'%E2%80%A6':u;d.appendChild(t);var r=document.createElement('div');r.style.cssText='display:flex;gap:4px';function mk(label,bg,fn){var b=document.createElement('button');b.textContent=label;b.style.cssText='flex:1;padding:4px 2px;background:'+bg+';border:none;color:%23fff;border-radius:4px;cursor:pointer;font-size:11px';b.onclick=fn;return b}r.appendChild(mk('\u76f4\u63a5\u4e0b\u8f09','%233b82f6',function(){window.open(A+'/?url='+encodeURIComponent(u)+'%26mode=direct','_blank')}));r.appendChild(mk('yt-dlp','%238b5cf6',function(){window.open(A+'/?url='+encodeURIComponent(u)+'%26mode=ytdlp','_blank')}));var cp=mk('\u8907\u88fd','%23374151',function(){navigator.clipboard.writeText(u);cp.textContent='\u2713';setTimeout(function(){cp.textContent='\u8907\u88fd'},1500)});r.appendChild(cp);d.appendChild(r);li.prepend(d)}var _f=window.fetch;window.fetch=function(){var u=typeof arguments[0]==='string'?arguments[0]:arguments[0]%26%26arguments[0].url;add(u);return _f.apply(this,arguments)};var _x=XMLHttpRequest.prototype.open;XMLHttpRequest.prototype.open=function(m,u){add(String(u||''));return _x.apply(this,arguments)};document.querySelectorAll('video,source').forEach(function(e){add(e.src||e.currentSrc||e.getAttribute('src'))});new MutationObserver(function(ms){ms.forEach(function(m){m.addedNodes.forEach(function(n){if(n.nodeType!==1)return;if(n.tagName==='VIDEO'||n.tagName==='SOURCE')add(n.src||n.currentSrc||n.getAttribute('src'));n.querySelectorAll%26%26n.querySelectorAll('video,source').forEach(function(e){add(e.src||e.currentSrc||e.getAttribute('src'))})})})}).observe(document.body,{childList:true,subtree:true})})();">📹 影片偵測器</a>
+
+      <div class="bm-steps">
+        <b>使用方式：</b><br>
+        1. 把上方按鈕 <span class="highlight">拖曳到書籤列</span>（或右鍵加入書籤）<br>
+        2. 前往任何有影片的網頁<br>
+        3. 點一下書籤列的「📹 影片偵測器」<br>
+        4. 頁面右上角會出現浮動面板<br>
+        5. 觸發影片播放 → 面板自動偵測 URL<br>
+        6. 點「直接下載」或「yt-dlp」→ 自動開啟本頁並下載
+      </div>
+    </div>
+  </div>
 </div>
 
 <script src="config.js"></script>
@@ -199,6 +263,26 @@
       document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
     });
   });
+
+  // Auto-fill from URL params (sent by bookmarklet)
+  (function() {
+    const params = new URLSearchParams(window.location.search);
+    const u = params.get('url');
+    const mode = params.get('mode');
+    if (!u) return;
+
+    history.replaceState({}, '', window.location.pathname);
+
+    if (mode === 'ytdlp') {
+      document.querySelector('[data-tab="ytdlp"]').click();
+      document.getElementById('ytdlp-url').value = u;
+      downloadYtdlp();
+    } else {
+      document.querySelector('[data-tab="direct"]').click();
+      document.getElementById('direct-url').value = u;
+      downloadDirect();
+    }
+  })();
 
   function setStatus(id, msg, type) {
     const el = document.getElementById(id);
