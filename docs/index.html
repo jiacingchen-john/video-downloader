@@ -342,16 +342,20 @@
         r.style.cssText = 'display:flex;gap:4px';
 
         if (isBlob) {
-          // blob: URL — must download locally in this page, server can't access it
+          // blob: URL — try direct anchor download; if it's a MediaSource blob it may not work
           r.appendChild(mk('\u4E0B\u8F09\uFF08\u672C\u6A5F\uFF09', '#059669', function() {
-            fetch(u).then(function(res) { return res.blob(); }).then(function(blob) {
-              var ext = blob.type.split('/')[1] || 'mp4';
+            try {
               var a = document.createElement('a');
-              a.href = URL.createObjectURL(blob);
-              a.download = 'video.' + ext;
+              a.href = u;
+              a.download = 'video.mp4';
               document.body.appendChild(a); a.click(); a.remove();
-            }).catch(function(e) { alert('\u4E0B\u8F09\u5931\u6557\uFF1A' + e.message); });
+            } catch(e) { alert('\u5931\u6557\uff1a' + e.message); }
           }));
+          // Show hint below URL text
+          var hint = document.createElement('div');
+          hint.style.cssText = 'color:#f59e0b;font-size:10px;margin-top:3px';
+          hint.textContent = '\u26a0 Blob URL\uff08MSE\u4e32\u6d41\uff09\u82e5\u4e0b\u8f09\u5931\u6557\uff0c\u8acb\u5411\u4e0b\u627e m3u8/mp4 \u7db2\u5740\u4e26\u4f7f\u7528 yt-dlp \u4e0b\u8f09';
+          d.insertBefore(hint, r);
         } else {
           r.appendChild(mk('\u76f4\u63a5\u4e0b\u8f09', '#3b82f6', function() {
             window.open(A + '/?url=' + encodeURIComponent(u) + '&mode=direct', '_blank');
